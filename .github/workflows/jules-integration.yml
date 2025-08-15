@@ -1,0 +1,115 @@
+name: Jules Integration Workflow
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  # Notify when Jules tasks are created
+  jules-task-notification:
+    if: contains(github.event.issue.labels.*.name, 'jules')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Jules Task Created
+        run: |
+          echo "New Jules task created: ${{ github.event.issue.title }}"
+          echo "Issue URL: ${{ github.event.issue.html_url }}"
+          echo "Jules can now work on this task by referencing the issue number"
+
+  # Quality checks for Jules-generated code
+  jules-code-quality:
+    if: github.actor == 'jules' || contains(github.event.pull_request.title, '[JULES]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          
+      - name: Code formatting check
+        run: |
+          black --check app/ tests/
+          isort --check-only app/ tests/
+          
+      - name: Linting
+        run: |
+          ruff check app/ tests/
+          
+      - name: Type checking
+        run: |
+          mypy app/
+          
+      - name: Security scan
+        run: |
+          bandit -r app/ -f json -o bandit-report.json
+          
+      - name: Run tests
+        run: |
+          pytest tests/ --cov=app --cov-report=xml
+          
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+
+  # Check for required documentation
+  jules-documentation-check:
+    if: github.actor == 'jules' || contains(github.event.pull_request.title, '[JULES]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check documentation updates
+        run: |
+          # Check if API documentation is updated for API changes
+          if git diff --name-only HEAD~1 | grep -q "app/api/"; then
+            echo "API changes detected, checking for documentation updates..."
+            if ! git diff --name-only HEAD~1 | grep -q "docs/"; then
+              echo "ERROR: API changes require documentation updates"
+              exit 1
+            fi
+          fi
+          
+      - name: Validate ADR creation
+        run: |
+          # Check if significant changes require ADR
+          changed_files=$(git diff --name-only HEAD~1 | wc -l)
+          if [ "$changed_files" -gt 10 ]; then
+            echo "Large changeset detected, checking for ADR..."
+            if ! git diff --name-only HEAD~1 | grep -q "docs/decisions/"; then
+              echo "WARNING: Large changes may require Architecture Decision Record"
+            fi
+          fi
+
+  # Cost impact analysis for AI features
+  ai-cost-analysis:
+    if: (github.actor == 'jules' || contains(github.event.pull_request.title, '[JULES]')) && contains(github.event.pull_request.body, 'AI service')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Extract cost information
+        run: |
+          echo "Analyzing AI service cost impact..."
+          # Check if cost tracking is implemented for new AI features
+          if git diff --name-only HEAD~1 | grep -q "ai_service"; then
+            echo "AI service changes detected"
+            if ! git diff HEAD~1 | grep -q "cost_tracker"; then
+              echo "WARNING: AI service changes should include cost tracking"
+            fi
+          fi
+          
+      - name: Validate cost approval
+        run: |
+          echo "Checking for cost approval documentation in PR body"
+          # This would integrate with actual cost tracking system
