@@ -13,9 +13,12 @@ You are working on an **AI-powered microlearning platform** for STEM education t
 
 ### Technology Stack
 - **Backend**: Python + FastAPI + LangGraph + PostgreSQL + Redis
-- **Frontend**: React Native (mobile) + React (web dashboard)
+- **Frontend**: Progressive Web App (PWA) - React + TypeScript + Vite
 - **AI Services**: OpenAI GPT-4, DALL-E 3, ElevenLabs, RunwayML, others with fallbacks
 - **Infrastructure**: Docker + Kubernetes + AWS/GCP
+
+### **CRITICAL ARCHITECTURE CHANGE**
+**We are now building a single Progressive Web App (PWA) instead of separate React Native and React applications.** This decision is documented in `docs/decisions/ADR-0003-web-only-architecture.md`. All development should focus on the web-app/ directory.
 
 ## Development Principles (MANDATORY)
 
@@ -79,8 +82,9 @@ microlearning/
 │   │   └── cost_tracker.py          # AI cost tracking
 │   ├── core/              # Core configurations
 │   └── main.py            # Application entry point
-├── mobile/                # React Native student app
-├── creator-dashboard/     # React web app for creators
+├── web-app/               # React PWA (students + creators)
+├── mobile/                # [DEPRECATED] React Native (see ADR-0003)
+├── creator-dashboard/     # [DEPRECATED] Separate React app (see ADR-0003)
 ├── docs/                  # All documentation
 │   ├── decisions/         # Architecture Decision Records
 │   └── *.md              # Technical documentation
@@ -148,15 +152,15 @@ if not cached_result:
 3. **Add API endpoints** for student and creator interfaces
 4. **Set up comprehensive testing** with mocking for AI services
 
-### Phase 2: Student Mobile App
-1. **Video player component** optimized for 9:16 content
-2. **Quiz interface** with touch interactions
-3. **Progress tracking** and achievement system
-4. **Offline support** for downloaded content
+### Phase 2: PWA Student Interface
+1. **Enhanced video player** with HLS streaming and mobile optimization
+2. **Binary choice quiz system** with timing and haptic feedback
+3. **TikTok-style feed navigation** with swipe gestures
+4. **PWA features**: offline support, installation prompts, push notifications
 
-### Phase 3: Creator Dashboard
+### Phase 3: PWA Creator Interface (Integrated)
 1. **AI content generation interface** with approval workflow
-2. **Content review and editing** tools
+2. **Content review and editing** tools within same PWA
 3. **Analytics dashboard** for content performance
 4. **Budget management** for AI service usage
 
@@ -222,6 +226,76 @@ If you encounter:
 - **Document everything** - future developers (human and AI) need context
 - **Be cost-conscious** - AI services are powerful but expensive
 - **Ask questions** - when in doubt, clarify requirements before implementing
+
+## Jules Agent Specific Instructions
+
+### Jules Primary Responsibilities
+Jules (jules.google.com) will focus on **frontend PWA development** with maximum autonomy:
+
+1. **UI Component Development** - Complete the web-app/src/components/ui/ library
+2. **Video Learning Engine** - Enhanced video player with HLS.js and quiz integration  
+3. **Student Interface** - TikTok-style feed with swipe navigation and progress tracking
+4. **PWA Implementation** - Service workers, offline support, installation prompts
+
+### Jules Autonomy Framework
+**HIGH AUTONOMY (No approval needed):**
+- Component API design following existing patterns in web-app/src/components/ui/
+- CSS styling and animations using Tailwind CSS
+- TypeScript interface definitions
+- File organization within web-app/ structure
+- Performance optimizations for mobile web
+
+**MEDIUM AUTONOMY (Document decisions):**
+- New npm dependencies (document in PR)
+- Component architecture changes (follow existing patterns)
+- State management patterns (use Zustand as established)
+- Testing strategies (follow existing structure)
+
+**LOW AUTONOMY (Seek approval):**
+- API endpoint changes affecting backend
+- Major architectural changes to PWA structure
+- Third-party service integrations beyond established list
+- Cost-impacting decisions affecting AI services
+
+### Jules Quality Standards
+- **Mobile-First**: All components must work perfectly on touch devices
+- **Performance**: 60fps animations, <2s load times, smooth video transitions
+- **Accessibility**: WCAG 2.1 AA compliance, keyboard navigation support
+- **Age-Adaptive**: Follow age-group variants from existing Button.tsx patterns
+- **TypeScript**: 100% type coverage, no 'any' types
+
+### Jules Reference Files (READ FIRST)
+**Essential Reading:**
+- `/docs/JULES_AUTONOMOUS_PLAN.md` - Complete task breakdown and instructions
+- `/docs/decisions/ADR-0003-web-only-architecture.md` - PWA architecture decision
+- `/web-app/src/components/ui/Button.tsx` - Component pattern to follow
+- `/web-app/src/components/ui/VideoPlayer.tsx` - Complex component example
+- `/web-app/package.json` - Available dependencies and scripts
+
+**Development Environment:**
+```bash
+cd web-app/
+npm install
+npm run dev          # Start development server
+npm run lint         # Check code quality  
+npm run type-check   # TypeScript validation
+npm run test         # Run test suite
+```
+
+### Jules Success Metrics
+- **Velocity**: 2-3 complete components per day
+- **Quality**: <10% rework rate on code reviews  
+- **Independence**: >80% of decisions made autonomously
+- **Mobile UX**: Perfect mobile usability scores
+- **Performance**: All Lighthouse scores >90
+
+### Jules Communication Protocol
+**Daily Commits**: Include brief progress summary
+**Weekly Updates**: Detailed progress in GitHub discussions
+**Blockers**: Immediate notification with specific technical context
+**Questions**: Use format specified in JULES_AUTONOMOUS_PLAN.md
+
+Jules should start with Task Group 1 in JULES_AUTONOMOUS_PLAN.md and work systematically through the component library, video engine, and student interface implementations.
 
 ---
 
