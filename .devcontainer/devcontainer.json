@@ -1,0 +1,97 @@
+{
+  "name": "MicroLearning Platform",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  
+  // Configure tool-specific properties
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.linting.ruffEnabled": true,
+        "python.formatting.provider": "black",
+        "python.sortImports.args": ["--profile", "black"],
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["tests"],
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        },
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/*.pyc": true,
+          ".pytest_cache": true
+        }
+      },
+      
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        "ms-python.isort",
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "GitHub.copilot",
+        "streetsidesoftware.code-spell-checker",
+        "ms-python.pytest",
+        "ms-vscode.test-adapter-converter"
+      ]
+    }
+  },
+  
+  // Use 'forwardPorts' to make a list of ports inside the container available locally
+  "forwardPorts": [8000, 5432, 6379, 3000, 19006],
+  "portsAttributes": {
+    "8000": {
+      "label": "FastAPI Backend",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL"
+    },
+    "6379": {
+      "label": "Redis"
+    },
+    "3000": {
+      "label": "Creator Dashboard"
+    },
+    "19006": {
+      "label": "Expo Metro"
+    }
+  },
+  
+  // Use 'postCreateCommand' to run commands after the container is created
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  
+  // Use 'postStartCommand' to run commands after the container starts
+  "postStartCommand": "bash .devcontainer/post-start.sh",
+  
+  // Comment out to connect as root instead
+  "remoteUser": "vscode",
+  
+  // Environment variables
+  "containerEnv": {
+    "PYTHONPATH": "/workspace",
+    "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@db:5432/microlearning",
+    "REDIS_URL": "redis://redis:6379",
+    "DEBUG": "true",
+    "ENVIRONMENT": "development"
+  },
+  
+  // Features to add to the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  }
+}
