@@ -3,11 +3,13 @@ Student database models
 """
 
 from sqlalchemy import Column, String, Integer, DateTime, JSON, Boolean
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 
 from app.core.database import Base
+from app.models.guid import GUID
+from app.models.json_array import JSONArray
 
 
 class Student(Base):
@@ -16,7 +18,7 @@ class Student(Base):
     __tablename__ = "students"
     
     # Primary fields
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
     username = Column(String(50), unique=True, nullable=False, index=True)
     age_group = Column(String(10), nullable=False, index=True)  # e.g., "12-15"
     
@@ -32,20 +34,20 @@ class Student(Base):
     total_quiz_attempts = Column(Integer, default=0)
     
     # Achievement data
-    achievements_unlocked = Column(ARRAY(String), default=list)  # list of achievement IDs
-    badges_earned = Column(ARRAY(String), default=list)  # list of badge IDs
+    achievements_unlocked = Column(JSONArray, default=list)  # list of achievement IDs
+    badges_earned = Column(JSONArray, default=list)  # list of badge IDs
     current_level = Column(Integer, default=1)
     experience_points = Column(Integer, default=0)
     
     # Learning path data
-    completed_topics = Column(ARRAY(String), default=list)  # list of topic IDs
+    completed_topics = Column(JSONArray, default=list)  # list of topic IDs
     current_learning_path = Column(String(255), nullable=True)  # current path ID
     preferred_difficulty = Column(Integer, default=5)  # 1-10 scale
     
     # Engagement metrics
     average_session_duration = Column(Integer, default=0)  # in seconds
-    last_video_watched = Column(UUID(as_uuid=True), nullable=True)
-    favorite_topics = Column(ARRAY(String), default=list)
+    last_video_watched = Column(GUID, nullable=True)
+    favorite_topics = Column(JSONArray, default=list)
     
     # Account status
     is_active = Column(Boolean, default=True)
@@ -57,6 +59,10 @@ class Student(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     last_active = Column(DateTime(timezone=True), server_default=func.now())
     streak_updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    quiz_responses = relationship("QuizResponse", back_populates="student", cascade="all, delete-orphan")
+    analytics_events = relationship("AnalyticsEvent", back_populates="student")
     
     def __repr__(self):
         return f"<Student(id={self.id}, username={self.username}, age_group={self.age_group})>"
@@ -91,8 +97,8 @@ class StudentSession(Base):
     
     __tablename__ = "student_sessions"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    student_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    student_id = Column(GUID, nullable=False, index=True)
     
     # Session data
     session_start = Column(DateTime(timezone=True), server_default=func.now())
@@ -123,14 +129,14 @@ class StudentPreference(Base):
     
     __tablename__ = "student_preferences"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    student_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    student_id = Column(GUID, nullable=False, index=True)
     
     # Learning preferences
     preferred_video_duration = Column(Integer, default=60)  # seconds
     preferred_learning_time = Column(String(20), nullable=True)  # morning, afternoon, evening
-    preferred_topics = Column(ARRAY(String), default=list)
-    avoided_topics = Column(ARRAY(String), default=list)
+    preferred_topics = Column(JSONArray, default=list)
+    avoided_topics = Column(JSONArray, default=list)
     
     # Interface preferences
     dark_mode = Column(Boolean, default=False)
@@ -146,7 +152,7 @@ class StudentPreference(Base):
     
     # Parental controls
     max_daily_screen_time = Column(Integer, nullable=True)  # minutes
-    allowed_topics = Column(ARRAY(String), nullable=True)  # restricted topic list
+    allowed_topics = Column(JSONArray, nullable=True)  # restricted topic list
     parent_notifications = Column(Boolean, default=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())

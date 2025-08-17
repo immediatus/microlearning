@@ -2,13 +2,14 @@
 Content database models for videos and learning materials
 """
 
-from sqlalchemy import Column, String, Integer, DateTime, JSON, Boolean, Text, Float
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy import Column, String, Integer, DateTime, JSON, Boolean, Text, Float, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
 import uuid
 
 from app.core.database import Base
+from app.models.guid import GUID
 
 
 class ContentStatus(str, Enum):
@@ -27,7 +28,9 @@ class LearningVideo(Base):
     __tablename__ = "learning_videos"
     
     # Primary fields
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    creator_id = Column(GUID, ForeignKey("creators.id"), nullable=True, index=True)
+    content_project_id = Column(GUID, ForeignKey("content_projects.id"), nullable=True, unique=True, index=True)
     title = Column(String(255), nullable=False)
     topic = Column(String(255), nullable=False, index=True)
     concept = Column(String(500), nullable=False)  # original concept prompt
@@ -91,6 +94,11 @@ class LearningVideo(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     published_at = Column(DateTime(timezone=True), nullable=True)
     last_viewed_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    quizzes = relationship("Quiz", back_populates="video", cascade="all, delete-orphan")
+    content_project = relationship("ContentProject", back_populates="published_video", uselist=False)
+    analytics_events = relationship("AnalyticsEvent", back_populates="video")
     
     def __repr__(self):
         return f"<LearningVideo(id={self.id}, title={self.title}, topic={self.topic})>"
@@ -116,8 +124,8 @@ class ContentProject(Base):
     
     __tablename__ = "content_projects"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    creator_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    creator_id = Column(GUID, ForeignKey("creators.id"), nullable=False, index=True)
     
     # Input parameters
     concept_prompt = Column(Text, nullable=False)
@@ -160,9 +168,11 @@ class ContentProject(Base):
     retry_count = Column(Integer, default=0)
     last_error = Column(Text, nullable=True)
     
-    # Output
-    published_video_id = Column(UUID(as_uuid=True), nullable=True)
-    
+    # Relationships
+    creator = relationship("Creator", back_populates="content_projects")
+    published_video = relationship("LearningVideo", back_populates="content_project", uselist=False)
+    cost_entries = relationship("AIServiceCost", back_populates="project")
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -189,7 +199,7 @@ class ContentTemplate(Base):
     
     __tablename__ = "content_templates"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
     category = Column(String(100), nullable=False)  # subject area
     
@@ -229,7 +239,7 @@ class ContentTag(Base):
     
     __tablename__ = "content_tags"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
     name = Column(String(100), unique=True, nullable=False, index=True)
     category = Column(String(50), nullable=False)  # topic, difficulty, format, etc.
     description = Column(Text, nullable=True)
