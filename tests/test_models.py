@@ -1,16 +1,21 @@
-import pytest
-import uuid
-from decimal import Decimal
 from datetime import datetime
+from decimal import Decimal
 
+import pytest
 from sqlalchemy.future import select
 
-from app.models.creator import Creator
-from app.models.student import Student, StudentSession, StudentPreference
-from app.models.content import ContentProject, LearningVideo, ContentStatus
-from app.models.quiz import Quiz, QuizResponse
-from app.models.billing import CreatorBudget, AIServiceCost, ApprovalRequest, ApprovalStatus
 from app.models.analytics import AnalyticsEvent
+from app.models.billing import (
+    AIServiceCost,
+    ApprovalRequest,
+    ApprovalStatus,
+    CreatorBudget,
+)
+from app.models.content import ContentProject, ContentStatus, LearningVideo
+from app.models.creator import Creator
+from app.models.quiz import Quiz, QuizResponse
+from app.models.student import Student, StudentPreference, StudentSession
+
 
 @pytest.mark.asyncio
 async def test_create_creator(db_session):
@@ -18,7 +23,7 @@ async def test_create_creator(db_session):
     creator = Creator(
         username="test_creator",
         email="creator@test.com",
-        hashed_password="hashed_password_example"
+        hashed_password="hashed_password_example",
     )
     db_session.add(creator)
     await db_session.commit()
@@ -30,6 +35,7 @@ async def test_create_creator(db_session):
     retrieved_creator = await db_session.get(Creator, creator.id)
     assert retrieved_creator is not None
     assert retrieved_creator.email == "creator@test.com"
+
 
 @pytest.mark.asyncio
 async def test_create_student_and_related_models(db_session):
@@ -51,18 +57,22 @@ async def test_create_student_and_related_models(db_session):
     db_session.add_all([preference, session])
     await db_session.commit()
 
-    retrieved_student = await db_session.get(Student, student.id)
     # Note: relationships are not automatically refreshed, so we can't directly check them
     # without a fresh query. We will test relationships explicitly.
 
-    retrieved_pref = await db_session.execute(select(StudentPreference).filter_by(student_id=student.id))
+    retrieved_pref = await db_session.execute(
+        select(StudentPreference).filter_by(student_id=student.id)
+    )
     assert retrieved_pref.scalar_one().dark_mode is True
+
 
 @pytest.mark.asyncio
 async def test_full_content_creation_flow(db_session):
     """Test the full relationship chain from creator to quiz response."""
     # 1. Create Creator and Student
-    creator = Creator(username="flow_creator", email="flow@test.com", hashed_password="pw")
+    creator = Creator(
+        username="flow_creator", email="flow@test.com", hashed_password="pw"
+    )
     student = Student(username="flow_student", age_group="12-15")
     db_session.add_all([creator, student])
     await db_session.commit()
@@ -72,7 +82,7 @@ async def test_full_content_creation_flow(db_session):
         creator_id=creator.id,
         concept_prompt="Testing relationships",
         age_group="12-15",
-        subject_area="Software Engineering"
+        subject_area="Software Engineering",
     )
     db_session.add(project)
     await db_session.commit()
@@ -95,7 +105,7 @@ async def test_full_content_creation_flow(db_session):
         age_groups=["12-15"],
         subject_area="Software Engineering",
         quiz_questions=[{"q": "Is this a test?", "a": "Yes"}],
-        status=ContentStatus.PUBLISHED
+        status=ContentStatus.PUBLISHED,
     )
     db_session.add(video)
     await db_session.commit()
@@ -110,7 +120,7 @@ async def test_full_content_creation_flow(db_session):
         question="Does this relationship work?",
         options={"a": "Yes", "b": "No"},
         correct_answer="a",
-        order=1
+        order=1,
     )
     db_session.add(quiz)
     await db_session.commit()
@@ -124,7 +134,7 @@ async def test_full_content_creation_flow(db_session):
         quiz_id=quiz.id,
         video_id=video.id,
         submitted_answer="a",
-        is_correct=True
+        is_correct=True,
     )
     db_session.add(response)
     await db_session.commit()
@@ -134,27 +144,51 @@ async def test_full_content_creation_flow(db_session):
     assert response.quiz_id == quiz.id
 
     # 6. Test relationships by querying
-    await db_session.refresh(creator)
-    await db_session.refresh(student)
-    await db_session.refresh(video)
+    await db_session.commit()  # Make sure everything is committed before querying
 
     # Query and check relationships
-    test_creator = await db_session.get(Creator, creator.id)
+    from sqlalchemy.orm import selectinload
+
+    # Test Creator relationships
+    result = await db_session.execute(
+        select(Creator)
+        .filter_by(id=creator.id)
+        .options(selectinload(Creator.content_projects))
+    )
+    test_creator = result.scalar_one()
     assert len(test_creator.content_projects) == 1
     assert test_creator.content_projects[0].concept_prompt == "Testing relationships"
 
-    test_video = await db_session.get(LearningVideo, video.id)
+    # Test Video relationships
+    result = await db_session.execute(
+        select(LearningVideo)
+        .filter_by(id=video.id)
+        .options(
+            selectinload(LearningVideo.content_project),
+            selectinload(LearningVideo.quizzes),
+        )
+    )
+    test_video = result.scalar_one()
     assert test_video.content_project.id == project.id
     assert len(test_video.quizzes) == 1
 
-    test_student = await db_session.get(Student, student.id)
+    # Test Student relationships
+    result = await db_session.execute(
+        select(Student)
+        .filter_by(id=student.id)
+        .options(selectinload(Student.quiz_responses))
+    )
+    test_student = result.scalar_one()
     assert len(test_student.quiz_responses) == 1
     assert test_student.quiz_responses[0].is_correct is True
+
 
 @pytest.mark.asyncio
 async def test_billing_and_analytics_relationships(db_session):
     """Test relationships for billing and analytics models."""
-    creator = Creator(username="billing_creator", email="billing@test.com", hashed_password="pw")
+    creator = Creator(
+        username="billing_creator", email="billing@test.com", hashed_password="pw"
+    )
     db_session.add(creator)
     await db_session.commit()
 
@@ -164,7 +198,7 @@ async def test_billing_and_analytics_relationships(db_session):
         monthly_limit=Decimal("1000.00"),
         daily_reset_at=datetime.utcnow(),
         weekly_reset_at=datetime.utcnow(),
-        monthly_reset_at=datetime.utcnow()
+        monthly_reset_at=datetime.utcnow(),
     )
     db_session.add(budget)
     await db_session.commit()
@@ -176,7 +210,7 @@ async def test_billing_and_analytics_relationships(db_session):
         estimated_cost=Decimal("0.50"),
         cost_tier="low",
         request_parameters={"prompt": "hello"},
-        content_type="script"
+        content_type="script",
     )
     db_session.add(cost_entry)
     await db_session.commit()
@@ -188,7 +222,7 @@ async def test_billing_and_analytics_relationships(db_session):
         estimated_cost=Decimal("0.50"),
         cost_tier="low",
         status=ApprovalStatus.APPROVED,
-        expires_at=datetime.utcnow()
+        expires_at=datetime.utcnow(),
     )
     db_session.add(approval)
     await db_session.commit()
@@ -196,18 +230,40 @@ async def test_billing_and_analytics_relationships(db_session):
     analytics_event = AnalyticsEvent(
         event_type="creator_login",
         creator_id=creator.id,
-        payload={"ip_address": "127.0.0.1"}
+        payload={"ip_address": "127.0.0.1"},
     )
     db_session.add(analytics_event)
     await db_session.commit()
 
     # Test relationships
-    await db_session.refresh(creator)
-    assert creator.budget.daily_limit == Decimal("100.00")
-    assert len(creator.ai_service_costs) == 1
-    assert len(creator.approval_requests) == 1
-    assert len(creator.analytics_events) == 1
+    await db_session.commit()
 
-    await db_session.refresh(cost_entry)
-    assert cost_entry.creator.username == "billing_creator"
-    assert cost_entry.approval_request.status == ApprovalStatus.APPROVED
+    from sqlalchemy.orm import selectinload
+
+    result = await db_session.execute(
+        select(Creator)
+        .filter_by(id=creator.id)
+        .options(
+            selectinload(Creator.budget),
+            selectinload(Creator.ai_service_costs),
+            selectinload(Creator.approval_requests),
+            selectinload(Creator.analytics_events),
+        )
+    )
+    test_creator = result.scalar_one()
+    assert test_creator.budget.daily_limit == Decimal("100.00")
+    assert len(test_creator.ai_service_costs) == 1
+    assert len(test_creator.approval_requests) == 1
+    assert len(test_creator.analytics_events) == 1
+
+    result = await db_session.execute(
+        select(AIServiceCost)
+        .filter_by(id=cost_entry.id)
+        .options(
+            selectinload(AIServiceCost.creator),
+            selectinload(AIServiceCost.approval_request),
+        )
+    )
+    test_cost_entry = result.scalar_one()
+    assert test_cost_entry.creator.username == "billing_creator"
+    assert test_cost_entry.approval_request.status == ApprovalStatus.APPROVED

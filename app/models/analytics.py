@@ -3,7 +3,7 @@ Analytics database models.
 """
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, JSON, String
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 

@@ -1,8 +1,11 @@
 import json
-from sqlalchemy.types import TypeDecorator, TEXT
+
+from sqlalchemy.types import TEXT, TypeDecorator
+
 
 class JSONArray(TypeDecorator):
     """Stores and retrieves a list as a JSON-encoded string."""
+
     impl = TEXT
     cache_ok = True
 

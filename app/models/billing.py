@@ -2,18 +2,18 @@
 Billing and cost-tracking database models.
 """
 
-from decimal import Decimal
-from datetime import datetime
-from enum import Enum
 import uuid
+from datetime import datetime
+from decimal import Decimal
+from enum import Enum
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
     ForeignKey,
     Integer,
-    JSON,
     Numeric,
     String,
     Text,
@@ -26,6 +26,7 @@ from app.models.guid import GUID
 
 class AIServiceType(str, Enum):
     """AI service types for cost tracking."""
+
     OPENAI_GPT = "openai_gpt"
     OPENAI_DALLE = "openai_dalle"
     ANTHROPIC_CLAUDE = "anthropic_claude"
@@ -44,6 +45,7 @@ class AIServiceType(str, Enum):
 
 class ApprovalStatus(str, Enum):
     """Approval status for AI operations."""
+
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -53,10 +55,11 @@ class ApprovalStatus(str, Enum):
 
 class CostTier(str, Enum):
     """Cost tiers for approval thresholds."""
-    LOW = "low"          # < $1
-    MEDIUM = "medium"    # $1 - $10
-    HIGH = "high"        # $10 - $100
-    CRITICAL = "critical" # > $100
+
+    LOW = "low"  # < $1
+    MEDIUM = "medium"  # $1 - $10
+    HIGH = "high"  # $10 - $100
+    CRITICAL = "critical"  # > $100
 
 
 class AIServiceCost(Base):
@@ -73,7 +76,7 @@ class AIServiceCost(Base):
 
     # Cost information
     estimated_cost = Column(Numeric(10, 4), nullable=False)  # Estimated cost in USD
-    actual_cost = Column(Numeric(10, 4), nullable=True)     # Actual cost from provider
+    actual_cost = Column(Numeric(10, 4), nullable=True)  # Actual cost from provider
     cost_tier = Column(String(20), nullable=False, index=True)
     currency = Column(String(3), default="USD")
 
@@ -89,14 +92,18 @@ class AIServiceCost(Base):
     response_metadata = Column(JSON, nullable=True)
 
     # Project context
-    project_id = Column(GUID, ForeignKey("content_projects.id"), nullable=True, index=True)
+    project_id = Column(
+        GUID, ForeignKey("content_projects.id"), nullable=True, index=True
+    )
     creator_id = Column(GUID, ForeignKey("creators.id"), nullable=False, index=True)
     content_type = Column(String(50), nullable=False)  # script, image, voice, etc.
 
     # Relationships
     creator = relationship("Creator", back_populates="ai_service_costs")
     project = relationship("ContentProject", back_populates="cost_entries")
-    approval_request = relationship("ApprovalRequest", back_populates="cost_entry", uselist=False)
+    approval_request = relationship(
+        "ApprovalRequest", back_populates="cost_entry", uselist=False
+    )
 
     # Approval workflow
     approval_status = Column(String(20), default=ApprovalStatus.PENDING, index=True)
@@ -129,7 +136,9 @@ class CreatorBudget(Base):
     __tablename__ = "creator_budgets"
 
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
-    creator_id = Column(GUID, ForeignKey("creators.id"), nullable=False, unique=True, index=True)
+    creator_id = Column(
+        GUID, ForeignKey("creators.id"), nullable=False, unique=True, index=True
+    )
 
     # Relationships
     creator = relationship("Creator", back_populates="budget")
@@ -171,7 +180,9 @@ class ApprovalRequest(Base):
     __tablename__ = "approval_requests"
 
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
-    cost_entry_id = Column(GUID, ForeignKey("ai_service_costs.id"), nullable=False, index=True)
+    cost_entry_id = Column(
+        GUID, ForeignKey("ai_service_costs.id"), nullable=False, index=True
+    )
     creator_id = Column(GUID, ForeignKey("creators.id"), nullable=False, index=True)
 
     # Relationships

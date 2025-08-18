@@ -30,15 +30,28 @@ class Creator(Base):
     is_superuser = Column(Boolean, default=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     last_login_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    content_projects = relationship("ContentProject", back_populates="creator", cascade="all, delete-orphan")
+    content_projects = relationship(
+        "ContentProject", back_populates="creator", cascade="all, delete-orphan"
+    )
     analytics_events = relationship("AnalyticsEvent", back_populates="creator")
-    ai_service_costs = relationship("AIServiceCost", back_populates="creator", cascade="all, delete-orphan")
-    budget = relationship("CreatorBudget", back_populates="creator", uselist=False, cascade="all, delete-orphan")
-    approval_requests = relationship("ApprovalRequest", back_populates="creator", cascade="all, delete-orphan")
+    ai_service_costs = relationship(
+        "AIServiceCost", back_populates="creator", cascade="all, delete-orphan"
+    )
+    budget = relationship(
+        "CreatorBudget",
+        back_populates="creator",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    approval_requests = relationship(
+        "ApprovalRequest", back_populates="creator", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Creator(id={self.id}, username='{self.username}')>"
