@@ -1,6 +1,5 @@
 import * as React from 'react';
 
-// A simple utility for conditional class names
 const cn = (...classes: (string | undefined | null | false)[]) => {
   return classes.filter(Boolean).join(' ');
 };

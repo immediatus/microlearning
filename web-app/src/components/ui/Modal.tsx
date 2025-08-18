@@ -9,14 +9,8 @@ const cn = (...classes: (string | undefined | null | false)[]) => {
 
 const Modal = DialogPrimitive.Root
 const ModalTrigger = DialogPrimitive.Trigger
-
-const ModalPortal = ({
-  className,
-  ...props
-}: DialogPrimitive.DialogPortalProps) => (
-  <DialogPrimitive.Portal className={cn(className)} {...props} />
-)
-ModalPortal.displayName = DialogPrimitive.Portal.displayName
+const ModalPortal = DialogPrimitive.Portal
+const ModalClose = DialogPrimitive.Close
 
 const ModalOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
@@ -105,7 +99,10 @@ ModalDescription.displayName = DialogPrimitive.Description.displayName
 
 export {
   Modal,
+  ModalPortal,
+  ModalOverlay,
   ModalTrigger,
+  ModalClose,
   ModalContent,
   ModalHeader,
   ModalFooter,
