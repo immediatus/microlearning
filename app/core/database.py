@@ -2,12 +2,12 @@
 Database configuration and session management
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+import structlog
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
-import structlog
 
-from app.core.config import settings, db_config
+from app.core.config import db_config, settings
 
 logger = structlog.get_logger()
 
@@ -31,14 +31,17 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
 )
 
+
 class Base(DeclarativeBase):
     """Base class for all database models."""
+
     pass
+
 
 async def get_db() -> AsyncSession:
     """
     Dependency for getting database session.
-    
+
     Yields:
         AsyncSession: Database session
     """
@@ -52,22 +55,19 @@ async def get_db() -> AsyncSession:
         finally:
             await session.close()
 
+
 async def create_tables():
     """Create all database tables."""
     try:
         async with engine.begin() as conn:
             # Import all models to ensure they're registered
-            from app.models.student import Student
-            from app.models.content import LearningVideo, ContentProject
-            from app.models.quiz import QuizResponse, QuizQuestion
-            from app.models.creator import Creator
-            from app.models.analytics import LearningSession, ProgressTracker
-            
+
             await conn.run_sync(Base.metadata.create_all)
             logger.info("Database tables created successfully")
     except Exception as e:
         logger.error("Failed to create database tables", exc_info=e)
         raise
+
 
 async def drop_tables():
     """Drop all database tables (for testing)."""
@@ -78,6 +78,7 @@ async def drop_tables():
     except Exception as e:
         logger.error("Failed to drop database tables", exc_info=e)
         raise
+
 
 async def check_database_connection():
     """Check if database connection is working."""

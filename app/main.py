@@ -3,18 +3,19 @@ MicroLearning Platform - FastAPI Backend
 Main application entry point
 """
 
+import time
+
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-import time
-import structlog
 
+from app.api.routes import api_router
 from app.core.config import settings
 from app.core.database import create_tables
-from app.api.routes import api_router
-from app.middleware.performance import PerformanceMiddleware
 from app.middleware.logging import LoggingMiddleware
+from app.middleware.performance import PerformanceMiddleware
 
 # Configure structured logging
 structlog.configure(
@@ -27,7 +28,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -54,10 +55,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=settings.ALLOWED_HOSTS
-)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
 
 app.add_middleware(PerformanceMiddleware)
 app.add_middleware(LoggingMiddleware)
@@ -65,19 +63,22 @@ app.add_middleware(LoggingMiddleware)
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")
 
+
 @app.on_event("startup")
 async def startup_event():
     """Application startup event handler."""
     logger.info("Starting MicroLearning Platform API")
-    
+
     if settings.CREATE_TABLES_ON_STARTUP:
         await create_tables()
         logger.info("Database tables created/verified")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event handler."""
     logger.info("Shutting down MicroLearning Platform API")
+
 
 @app.get("/")
 async def root():
@@ -86,8 +87,9 @@ async def root():
         "message": "MicroLearning Platform API",
         "version": "1.0.0",
         "status": "healthy",
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
+
 
 @app.get("/health")
 async def health_check():
@@ -96,8 +98,9 @@ async def health_check():
         "status": "healthy",
         "timestamp": time.time(),
         "version": "1.0.0",
-        "environment": settings.ENVIRONMENT
+        "environment": settings.ENVIRONMENT,
     }
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -106,30 +109,29 @@ async def global_exception_handler(request: Request, exc: Exception):
         "Unhandled exception occurred",
         exc_info=exc,
         path=request.url.path,
-        method=request.method
+        method=request.method,
     )
-    
+
     if settings.DEBUG:
         return JSONResponse(
             status_code=500,
             content={
                 "error": "Internal server error",
                 "detail": str(exc),
-                "type": type(exc).__name__
-            }
+                "type": type(exc).__name__,
+            },
         )
     else:
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error"}
-        )
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=8000,
         reload=settings.DEBUG,
-        log_level="info"
+        log_level="info",
     )
